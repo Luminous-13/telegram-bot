@@ -23,10 +23,14 @@ threading.Thread(target=run_http_server, daemon=True).start()
 TOKEN = "8917617373:AAGJSuFAtfAROKjTs2JDfkBr-CTSgSuKCC8"
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    # စာပါပါ၊ ပုံနဲ့တွဲပါပါ ဖတ်ရှုနိုင်ရန်
+    text = update.message.text or update.message.caption
+    if not text:
+        return
+
+    # စာထဲမှ နံပါတ်များကို သီးသန့် ရှာဖွေခြင်း
     numbers = re.findall(r'\d+', text)
     
-    # စာထဲမှာ နံပါတ်ပါမှသာ တုံ့ပြန်မည်
     if numbers:
         found_numbers = " ".join(numbers)
         reply_text = f"<code>{found_numbers}</code>"
@@ -46,11 +50,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML",
             reply_markup=reply_markup
         )
-    # နံပါတ်မပါပါက else အပိုင်းမပါတော့သဖြင့် Bot မှ ဘာမှ ပြန်မပို့တော့ပါ
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Group ထဲက စာအားလုံးနှင့် Photo Caption များကို ဖတ်ရန်
+    app.add_handler(MessageHandler((filters.TEXT | filters.CAPTION) & ~filters.COMMAND, handle_message))
     
     print("Bot စတင်အလုပ်လုပ်နေပါပြီ...")
     app.run_polling()
