@@ -1,7 +1,11 @@
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import re
 import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
+# --- Render Web Service အတွက် HTTP Server ---
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -15,33 +19,40 @@ def run_http_server():
 
 threading.Thread(target=run_http_server, daemon=True).start()
 
-import re
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
-
+# --- Telegram Bot Code ---
 TOKEN = "8917617373:AAGJSuFAtfAROKjTs2JDfkBr-CTSgSuKCC8"
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     numbers = re.findall(r'\d+', text)
     
+    # စာထဲမှာ နံပါတ်ပါမှသာ တုံ့ပြန်မည်
     if numbers:
-        # HTML Format ပြောင်းထားသဖြင့် Parse Error လုံးဝ မတက်တော့ပါ
-        formatted_numbers = [f"<code>{num}</code>" for num in numbers]
-        reply_text = "👇 နှိပ်လိုက်ပါက တန်းပြီး Copy ကူးသွားပါမည် -\n\n" + "\n".join(formatted_numbers)
+        found_numbers = " ".join(numbers)
+        reply_text = f"<code>{found_numbers}</code>"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    text="📋 Copy 🤍",
+                    switch_inline_query_current_chat=found_numbers
+                )
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
             text=reply_text,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=reply_markup
         )
-    else:
-        await update.message.reply_text("စာထဲတွင် Number တစ်ခုမျှ မတွေ့ပါ။")
+    # နံပါတ်မပါပါက else အပိုင်းမပါတော့သဖြင့် Bot မှ ဘာမှ ပြန်မပို့တော့ပါ
 
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("MacBook တွင် Bot စတင်အလုပ်လုပ်နေပါပြီ...")
+    print("Bot စတင်အလုပ်လုပ်နေပါပြီ...")
     app.run_polling()
 
 if __name__ == '__main__':
